@@ -9,6 +9,7 @@ import cartopy
 from PIL import Image as PImage
 import scipy.stats
 import os
+plt.style.use('seaborn-white')
 
 def SampleIDD(Data):
 
@@ -103,8 +104,7 @@ def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='de
     leg.get_frame().set_alpha(1)
     
     if save:
-        path = os.getcwd()
-        plt.savefig(path+'../Plots/'+AA+'vs'+BB+' '+'.pdf',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')
+        plt.savefig('../Plots/'+AA+'vs'+BB+'.pdf',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')
     
     plt.show()
 
@@ -132,13 +132,11 @@ def grafico_edades(Data,Data_cores ='default',save=False):
     plt.figure(figsize=(20,10))
     ax = plt.axes()
 
-    #Data = Data.fillna(0)
-    Data = Data.dropna(axis = 'rows',subset=(['Edad']))
+    Data_magnitud = Data.copy()
     Data['Historic'] = Data['Edad'].str.contains('Historic')
     Data = Data[Data['Historic']!= True]
     Data = Data.dropna(subset=['Edad'])
     Data = Data.reset_index(drop=True)
-
     Data.Edad = Data.Edad.values/1000
     Data.ErrorEdad = Data.ErrorEdad.values/1000
     Eventos = Data['Evento'].values
@@ -149,12 +147,14 @@ def grafico_edades(Data,Data_cores ='default',save=False):
     k = 0
 
     while i < np.size(Eventos):
-
+        #print("0 {}, {}".format(Eventos[i],Volcanes[i]))
         Color, Marker  = simbologia(Volcanes[i],Eventos[i])
         marker_edge = 'black'
         Data_evento = Data.loc[Data['Volcán'] == Volcanes[i]]        
         Data_evento = Data_evento.loc[Data_evento['Evento'] == Eventos[i]]
-        Magnitud = scipy.stats.mode(Data_evento.Magnitud)
+        Data_magnitud_evento = Data_magnitud.loc[Data_magnitud['Volcán'] == Volcanes[i]]
+        Data_magnitud_evento = Data_magnitud_evento.loc[Data_magnitud_evento['Evento'] == Eventos[i]]
+        Magnitud = scipy.stats.mode(Data_magnitud_evento.Magnitud)
         Magnitud = Magnitud[0]
         Magnitud = Magnitud[0]
 
@@ -234,7 +234,7 @@ def grafico_edades(Data,Data_cores ='default',save=False):
     plt.ylabel('Magnitud', fontsize=20)
     #ax.set_xticklabels((np.linspace(0,15,6),0))
     ax.tick_params(labelsize = 30)
-    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.5,1),ncol=3, fontsize=16)
+    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.6,1),ncol=3, fontsize=16)
     leg.get_frame().set_alpha(0.5)
     plt.xticks(np.linspace(0,14,15))
     plt.grid(axis ='x')
@@ -251,7 +251,7 @@ AVZ= PImage.open(AVZ)
 Ambos="../Scripts/Images/Ambos.jpg" 
 Ambos= PImage.open(Ambos)
 
-def grafico_posicion(Datas,zona,VOLCANES='default', texto='no'):
+def grafico_posicion(Datas,zona,VOLCANES='default', texto='no',save=False):
 
 
     if zona == 'Ambos':
@@ -304,9 +304,11 @@ def grafico_posicion(Datas,zona,VOLCANES='default', texto='no'):
 	
     if zona == 'Ambos':
         MarkerSize = 27
+        FontSize=20
     else:
         MarkerSize = 35
-		
+        FontSize=24
+    VOLCANES = VOLCANES.reset_index(drop=True)	
     for i in range(0,np.size(VOLCANES.Volcán)):
         Color, Marker  = simbologia(VOLCANES.Volcán[i],'Unknown')
         x,y = (VOLCANES.Longitud[i],VOLCANES.Latitud[i])
