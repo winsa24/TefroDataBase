@@ -30,7 +30,85 @@ def SampleIDD(Data):
 
 def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False):
 
-    plt.figure(figsize=(13,13))
+    plt.figure(figsize=(7,7))
+    ax = plt.axes()
+    
+    #plot identifyed glass shards
+    Data = Data.dropna(subset=[AA,BB])
+    Data = Data.reset_index(drop=True)
+    MarkerSize = 11; Alpha = 0.5
+
+#----------------------------- PLOT Data base ---------------------------------
+    
+    for volcan in Data.Volcan.unique():
+        #print('Volcan {}'.format(volcan))
+        temp0 = Data[Data.Volcan == volcan]
+        #print(volcan)
+        for evento in temp0.Evento.unique():
+            #print(evento,temp0.Evento.unique())
+            temp = temp0[temp0.Evento== evento]
+            A = temp[AA].values
+            B = temp[BB].values
+            Index = temp.first_valid_index()
+            Color, Marker  = simbologia(temp.Volcan[Index],temp.Evento[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A,B, color = Color, marker = Marker, alpha=Alpha,label=evento)
+        
+#---------------------------------------plot core data when given
+    if isinstance(Data_cores,pd.DataFrame):   
+        Data_cores = Data_cores.dropna(subset=[AA,BB])
+        Data_cores = Data_cores.reset_index(drop=True)
+        Depth = Data_cores['Depth']
+        A = Data_cores[AA].values
+        B = Data_cores[BB].values
+        Core = Data_cores['Core']
+        Depth0 = 0
+        Core0 = 0
+        markers = itertools.cycle(('o','o','v','^','p','<','h','o','v','s','^','p','<','h','>','h','>','X','D','d', 'o','v','s','^','p','d','>','X','D',))
+        colors = itertools.cycle(('black','white'))
+        Color = next(colors)
+        Marker = next(markers)
+
+        for i in range(0,np.size(Depth)):
+            if (Depth[i] == Depth0)&(Core[i] == Core0):
+                Color, Marker  = simbologia_core(Core[i],Depth[i])
+                plt.scatter(A[i], B[i],marker = Marker, color = Color, markersize=20, markeredgecolor = 'black', alpha=1)
+
+            else:
+                Color, Marker  = simbologia_core(Core[i],Depth[i])
+                plt.scatter(A[i], B[i],marker = Marker, color = Color, markersize=20,label=Core[i]+ ' '+ Depth[i],markeredgecolor = 'black', alpha=1)
+                Depth0 = Depth[i]
+                Core0 = Core[i]
+	#    if i == (np.size(Depth)-1):
+	#	    print(i)
+	#        plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=13,label=Core[i]+ ''+ Depth[i],markeredgecolor = 'black', alpha=1)
+            
+    if (Xmax!='default')&(Xmin!='default'):
+        plt.xlim(Xmin,Xmax)
+
+    if (Ymin!='default')&(Ymax!='default'):
+        plt.ylim(Ymin,Ymax)		
+		
+    plt.xlabel(AA, fontsize = 22)
+    plt.ylabel(BB, fontsize = 22)
+    ax.tick_params(labelsize = 22,axis='both', which='major')
+    #if Data.Evento.unique().size > 90:
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
+    #if (Data.Evento.unique().size > 45)&(Data.Evento.unique().size < 90):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
+    #if (Data.Evento.unique().size < 45):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.62,1),ncol=1,fontsize=15)
+    
+    #leg.get_frame().set_alpha(1)
+    
+    if save:
+        plt.savefig('../Plots/'+AA+'vs'+BB+'.png',dpi = 300,bbox_inches='tight')
+    
+    plt.show()
+
+def graficar5x5(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False):
+
+    plt.figure(figsize=(6,6))
     ax = plt.axes()
     
     #plot identifyed glass shards
@@ -50,16 +128,16 @@ def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='de
             if Volcanes[i] == Volcan:
                 #print("1 Volcan {}, Core {} ".format(Volcanes[i],Eventos[i]))
                 Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-                plt.plot(A[i],B[i], color = Color, marker = Marker,markersize=11, alpha=0.5,markeredgecolor = Color)
+                plt.plot(A[i],B[i], color = Color, marker = Marker,markersize=12, alpha=0.7,markeredgecolor = Color)
             else:
                 Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-                plt.plot(A[i],B[i], color = Color, marker = Marker, markersize = 11,alpha=0.5, label = Eventos[i], markeredgecolor = Color)
+                plt.plot(A[i],B[i], color = Color, marker = Marker, markersize = 12,alpha=0.7, label = Eventos[i], markeredgecolor = Color)
                 Volcan = Volcanes[i]
 
         else:
             #print("2 Volcan {}, Evento {} ".format(Volcanes[i],Eventos[i]))
             Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-            plt.plot(A[i],B[i], color = Color, marker = Marker, markersize = 11,alpha=0.5, label = Eventos[i], markeredgecolor = Color)
+            plt.plot(A[i],B[i], color = Color, marker = Marker, markersize = 12,alpha=0.7, label = Eventos[i], markeredgecolor = Color)
             Evento = Eventos[i]
             Volcan = Volcanes[i]
                            
@@ -81,11 +159,11 @@ def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='de
         for i in range(0,np.size(Depth)):
             if (Depth[i] == Depth0)&(Core[i] == Core0):
                 Color, Marker  = simbologia_core(Core[i],Depth[i])
-                plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=20, markeredgecolor = 'black', alpha=1)
+                plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=13, markeredgecolor = 'black', alpha=1)
 
             else:
                 Color, Marker  = simbologia_core(Core[i],Depth[i])
-                plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=20,label=Core[i]+ ' '+ Depth[i],markeredgecolor = 'black', alpha=1)
+                plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=13,label=Core[i]+ ' '+ Depth[i],markeredgecolor = 'black', alpha=1)
                 Depth0 = Depth[i]
                 Core0 = Core[i]
 	#    if i == (np.size(Depth)-1):
@@ -98,21 +176,21 @@ def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='de
     if (Ymin!='default')&(Ymax!='default'):
         plt.ylim(Ymin,Ymax)		
 		
-    plt.xlabel(AA, fontsize = 32)
-    plt.ylabel(BB, fontsize = 32)
-    ax.tick_params(labelsize = 32)
+    plt.xlabel(AA, fontsize = 20)
+    plt.ylabel(BB, fontsize = 20)
+    ax.tick_params(labelsize = 20)
 
     if Data.Evento.unique().size > 90:
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.7,1),ncol=3,fontsize=11)
+        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
     if (Data.Evento.unique().size > 45)&(Data.Evento.unique().size < 90):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.5,1),ncol=2,fontsize=13)
+        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
     if (Data.Evento.unique().size < 45):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.32,1),ncol=1,fontsize=15)
+        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=1,fontsize=15)
     
     leg.get_frame().set_alpha(1)
     
     if save:
-        plt.savefig('../Plots/'+AA+'vs'+BB+'.pdf',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')
+        plt.savefig('../Plots/'+AA+'vs'+BB+'.png',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')
     
     plt.show()
 
