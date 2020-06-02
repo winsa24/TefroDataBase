@@ -28,7 +28,7 @@ def SampleIDD(Data):
     Data=Data.replace(to_replace=-1, value=np.nan)
     return Data
 
-def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False):
+def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False,nombre='default'):
 
     plt.figure(figsize=(7,7))
     ax = plt.axes()
@@ -52,36 +52,27 @@ def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='de
             Index = temp.first_valid_index()
             Color, Marker  = simbologia(temp.Volcan[Index],temp.Evento[Index])
             #print(A); print(B);print(Marker, Color)
-            plt.scatter(A,B, color = Color, marker = Marker, alpha=Alpha,label=evento)
+            plt.scatter(A,B, color = Color, marker = Marker, alpha=Alpha)
         
 #---------------------------------------plot core data when given
     if isinstance(Data_cores,pd.DataFrame):   
         Data_cores = Data_cores.dropna(subset=[AA,BB])
         Data_cores = Data_cores.reset_index(drop=True)
-        Depth = Data_cores['Depth']
-        A = Data_cores[AA].values
-        B = Data_cores[BB].values
-        Core = Data_cores['Core']
-        Depth0 = 0
-        Core0 = 0
-        markers = itertools.cycle(('o','o','v','^','p','<','h','o','v','s','^','p','<','h','>','h','>','X','D','d', 'o','v','s','^','p','d','>','X','D',))
-        colors = itertools.cycle(('black','white'))
-        Color = next(colors)
-        Marker = next(markers)
-
-        for i in range(0,np.size(Depth)):
-            if (Depth[i] == Depth0)&(Core[i] == Core0):
-                Color, Marker  = simbologia_core(Core[i],Depth[i])
-                plt.scatter(A[i], B[i],marker = Marker, color = Color, markersize=20, markeredgecolor = 'black', alpha=1)
-
-            else:
-                Color, Marker  = simbologia_core(Core[i],Depth[i])
-                plt.scatter(A[i], B[i],marker = Marker, color = Color, markersize=20,label=Core[i]+ ' '+ Depth[i],markeredgecolor = 'black', alpha=1)
-                Depth0 = Depth[i]
-                Core0 = Core[i]
-	#    if i == (np.size(Depth)-1):
-	#	    print(i)
-	#        plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=13,label=Core[i]+ ''+ Depth[i],markeredgecolor = 'black', alpha=1)
+        MarkerSize = 200; Alpha = 0.5
+        
+        for core in Data_cores.Core.unique():
+            #print('Volcan {}'.format(volcan))
+            temp0 = Data_cores[Data_cores.Core == core]
+            #print(volcan)
+            for depth in temp0.Depth.unique():
+                #print(evento,temp0.Evento.unique())
+                temp = temp0[temp0.Depth == depth]
+                A = temp[AA].values
+                B = temp[BB].values
+                Index = temp.first_valid_index()
+                Color, Marker  = simbologia_core(temp.Core[Index],temp.Depth[Index])
+                #print(A); print(B);print(Marker, Color)
+                plt.scatter(A,B, color = Color, marker = Marker,s=MarkerSize, edgecolors ='black', label=Data_cores.Label[Index])
             
     if (Xmax!='default')&(Xmin!='default'):
         plt.xlim(Xmin,Xmax)
@@ -97,14 +88,15 @@ def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='de
     #if (Data.Evento.unique().size > 45)&(Data.Evento.unique().size < 90):
     #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
     #if (Data.Evento.unique().size < 45):
-    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.62,1),ncol=1,fontsize=15)
+    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.35,1),ncol=1,fontsize=14)
     
-    #leg.get_frame().set_alpha(1)
+    leg.get_frame().set_alpha(1)
     
     if save:
-        plt.savefig('../Plots/'+AA+'vs'+BB+'.png',dpi = 300,bbox_inches='tight')
+        plt.savefig('../Plots/'+nombre+'.png',dpi = 300,bbox_inches='tight')
     
     plt.show()
+	
 
 def graficar5x5(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False):
 
@@ -208,8 +200,9 @@ def simbologia_core(testigo,profundidad):
     simbología = pd.read_excel('../Scripts/SimbologiaTestigos.xlsx')
     EventO = simbología.loc[simbología['Testigo'] == testigo]
     EventO = EventO.loc[EventO['Profundidad'] == profundidad]
-    coloR = EventO.values[0,2]
-    markeR = EventO.values[0,3]
+    Index = EventO.first_valid_index()
+    coloR = EventO.Color[Index]
+    markeR = EventO.Simbología[Index]
     return coloR, markeR
 	          	          
 def grafico_edades(Data,Data_cores ='default',save=False):
