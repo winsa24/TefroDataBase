@@ -15,6 +15,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
+import os
+
+#os.chdir('OneDrive/PhD/TephraDataBase/Scripts')
+from funciones import simbologia
 
 np.random.seed(0)
 
@@ -40,7 +44,6 @@ df = df.replace(to_replace='Over range', value=np.nan)
 df = df.replace(to_replace='bdl', value=np.nan)
 df = df.replace(to_replace='<1', value=1)
 df = df.replace(to_replace='Not determined', value=np.nan)
-df = df.replace(to_replace=' ', value=np.nan)
 df = df.replace(to_replace='<0.01', value=0.01)
 df = df.replace(to_replace='<0.1', value=0.1)
 df = df.replace(to_replace='<5', value=np.nan)
@@ -48,7 +51,22 @@ df = df.replace(to_replace='<10', value=np.nan)
 df = df.replace(to_replace='<4', value=np.nan)
 df = df.replace(to_replace='<6', value=np.nan)
 df = df.replace(to_replace='n.a.', value=np.nan)
-df = df.replace(to_replace='not determined', value=np.nan)
+
+# 1.2 - Drop FeO, FeO2, LOI and Total
+df = df.drop(['Fe2O3','FeO','LOI','Total'], axis=1)
+
+# 1.3 - Drop Samples labeled as Prueba (in Spanish "test"), Subsidiary Vcha dome which is an unidentified Volcano
+#        and samples measured by 'Accelerator Mass Spectrometry' which is used to measure age and not geochemistry
+df = df[(df.Volcan != 'Prueba')&(df.Volcan != 'Subsidiary Vcha dome')]
+df = df[(df.TecnicaDeMedicion != 'Accelerator Mass Spectrometry')]
+
+# 1.4 - Filter samples with Flag 4 == problems in geochemistry 
+print('Number of samples with doutfull geochemistry: {}'.format(df[df.Flag == 4].shape[0]))
+df = df[df.Flag != 4]
+
+# here additionally the samples for which a problem in the classification of the sample has been indicated in the 
+# literature might also be done. corresponding to Flag == 3
+print('Number of samples with doutfull classification: {}'.format(df[df.Flag == 3].shape[0]))
 
 df.loc[:, 'SiO2':'U'] = df.loc[:, 'SiO2':'U'].astype('float')
 
@@ -64,11 +82,11 @@ y = np.array(df['Volcan'].cat.codes)
 # Print nb of samples per class
 unique, counts = np.unique(y, return_counts=True)
 for u, c in zip(unique, counts):
-    print('id: {}, count: {}'.format(u, c))
+    print('id: {}, volcán: \033[1m{}\033[0m, count: {}'.format(u,df.Volcan.cat.categories[u],c))
 n_classes = len(unique)
 
 # 3 - Retrieve the geochemical data
-X_major = df.loc[:, 'SiO2':'P2O5']
+X_major = df.loc[:, 'SiO2':'Cl'] 
 X_traces = df.loc[:, 'Rb':'U']
 X = pd.concat([X_major, X_traces], axis=1)
 
@@ -154,15 +172,22 @@ hue = y_pred//2
 style = y_pred % 2
 pal = sns.color_palette("hls", len(np.unique(y_test_out)))
 dpal = {}
-for i, col in enumerate(pal):
-    dpal[i] = col
+for i, ID in enumerate(np.unique(y_test_out)):
+    volcan = df.Volcan.cat.categories[ID]
+    #print(volcan)
+    color, marker = simbologia(volcan,'Unknown')
+    dpal[volcan] = color
+
+y_test_out_Volcan = df.Volcan.cat.categories[y_test_out]
+y_pred_Volcan = df.Volcan.cat.categories[y_pred]
+
 fig, axes = plt.subplots(1, 2)
 ind_wrong = np.where(y_pred != y_test_out)[0]
 
 sns.scatterplot(X_test_out.loc[:, 'TiO2'], X_test_out.loc[:, 'K2O'],
-                hue=y_test_out, alpha=0.8, palette=dpal, ax=axes[0])
+                hue=y_test_out_Volcan, alpha=0.7, palette=dpal, ax=axes[0])
 sns.scatterplot(X_test_out.loc[:, 'TiO2'], X_test_out.loc[:, 'K2O'],
-                hue=y_pred, alpha=0.8, palette=dpal, ax=axes[1])
+                hue=y_pred_Volcan, alpha=0.7, palette=dpal, ax=axes[1])
 
 sns.scatterplot(X_test_out.TiO2.iloc[ind_wrong],
                 X_test_out.K2O.iloc[ind_wrong],
@@ -171,11 +196,54 @@ sns.scatterplot(X_test_out.TiO2.iloc[ind_wrong],
                 X_test_out.K2O.iloc[ind_wrong],
                 alpha=1,  ax=axes[1], marker='x', color='k')
 
+axes[0].set_title("Original data")
+axes[0].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
+axes[1].set_title("Predicted data")
+axes[1].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
+
+fig, axes = plt.subplots(1, 2, figsize=(15,5))
+ind_wrong = np.where(y_pred != y_test_out)[0]
+
+sns.scatterplot(X_test_out.loc[:, 'SiO2'], X_test_out.loc[:, 'K2O'],
+                hue=y_test_out_Volcan, alpha=0.7, palette=dpal, ax=axes[0])
+sns.scatterplot(X_test_out.loc[:, 'SiO2'], X_test_out.loc[:, 'K2O'],
+                hue=y_pred_Volcan, alpha=0.7, palette=dpal, ax=axes[1])
+
+sns.scatterplot(X_test_out.SiO2.iloc[ind_wrong],
+                X_test_out.K2O.iloc[ind_wrong],
+                alpha=1, ax=axes[0], marker='x', color='k')
+sns.scatterplot(X_test_out.SiO2.iloc[ind_wrong],
+                X_test_out.K2O.iloc[ind_wrong],
+                alpha=1,  ax=axes[1], marker='x', color='k')
+
+axes[0].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
+axes[1].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
+
+
 # Plot confusion matrix
 cm = confusion_matrix(y_test_out, y_pred)
 cm = (cm.T/cm.sum(axis=1)).T
 plt.imshow(cm)
 plt.colorbar()
+
+########################### Classifying new samples ########################
+#Load data
+Data_cores = pd.read_excel('../Data/DataCores.xlsx')
+
+#Filtering the tephra I want to identify
+Data_cores = Data_cores[Data_cores.Label.isin(["T9/100"])]
+
+#Pre processing data
+Data_cores.loc[:, 'SiO2':'U'] = Data_cores.loc[:, 'SiO2':'U'].astype('float')
+Data_cores_mayor = Data_cores.loc[:, 'SiO2':'K2O']
+Data_cores_trace = Data_cores.loc[:, 'Rb':'U']
+X_cores = pd.concat([Data_cores_mayor, Data_cores_trace], axis=1)
+
+#Predict
+y_pred = gs.predict(X_cores)
+(unique, counts) = np.unique(y_pred, return_counts=True)
+frequencies = np.asarray((unique, counts)).T
+print(frequencies)
 
 
 
