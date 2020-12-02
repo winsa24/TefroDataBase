@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 import os
 
-#os.chdir('OneDrive/PhD/TephraDataBase/Scripts')
+os.chdir('OneDrive/PhD/TephraDataBase/Scripts')
 from funciones import simbologia
 
 np.random.seed(0)
@@ -36,8 +36,6 @@ df = pd.read_excel('../Data/TephraDataBase.xlsx')
 #     print(j)
 #     pd.to_numeric(tmp.iloc[:, j], errors = 'raise')
 
-# Pb line 4410 for variable Fe0: what is 10..3?
-df = df.replace(to_replace='10..3', value=np.nan)
 df = df.replace(to_replace='Not analyzed', value=np.nan)
 df = df.replace(to_replace='-', value=np.nan)
 df = df.replace(to_replace='Over range', value=np.nan)
@@ -200,6 +198,13 @@ axes[0].set_title("Original data")
 axes[0].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
 axes[1].set_title("Predicted data")
 axes[1].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
+plt.tight_layout()
+#plt.show(block=False)
+plt.ion()
+plt.show()
+
+
+
 
 fig, axes = plt.subplots(1, 2, figsize=(15,5))
 ind_wrong = np.where(y_pred != y_test_out)[0]
