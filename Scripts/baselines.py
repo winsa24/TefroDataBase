@@ -159,17 +159,17 @@ for train_index, test_index in GroupShuffleSplit(test_size=.30, n_splits=5, rand
     y_train, y_test = y[train_index], y[test_index]
 
     imp = IterativeImputer(random_state=0,min_value = 0)
-    T_train = imp.fit_transform(X_train)
-    T_test = imp.transform(X_test)
+    T_train_imp = imp.fit_transform(X_train)
+    T_test_imp = imp.transform(X_test)
 
     sc = StandardScaler()
-    T_train = sc.fit_transform(T_train)
-    T_test = sc.transform(T_test)
+    T_train_esc = sc.fit_transform(T_train_imp)
+    T_test_esc = sc.transform(T_test_imp)
 
-    est.fit(T_train, y_train)
-    ac = est.score(T_test, y_test)
+    est.fit(T_train_esc, y_train)
+    ac = est.score(T_test_esc, y_test)
     scores.append(ac)
-    bc = balanced_accuracy_score(y_test, est.predict(T_test))
+    bc = balanced_accuracy_score(y_test, est.predict(T_test_esc))
     Balanced_Scores.append(bc)
 end = time.time()
 
@@ -225,7 +225,7 @@ sns.scatterplot(embedding[:,0], embedding[:,1],hue= y_train_Volcan,palette=Color
 plt.show()
 
 # Function to plot prediction and imputing
-def Colores(df, Y):
+def Colores(Y):
     Dpal = {}
     for i, ID in enumerate(np.unique(Y)):
         volcan = df.Volcan.cat.categories[ID]
@@ -234,12 +234,8 @@ def Colores(df, Y):
         Dpal[volcan] = color
     return Dpal
 
-def gráfico(X_test_out,y_test_out,X,y,A,B):
+def gráfico(X_test_imp,y_test_out,y_pred,X,y,A,B):
     
-    clf = make_pipeline(imp,sc,est)
-    y_pred = clf.predict(X_test_out)
-    #y_pred = gs.predict(X_test_out)
-
     y_test_out_Volcan = df.Volcan.cat.categories[y_test_out]
     y_pred_Volcan = df.Volcan.cat.categories[y_pred]
     ind_wrong = np.where(y_pred != y_test_out)[0]
@@ -250,20 +246,18 @@ def gráfico(X_test_out,y_test_out,X,y,A,B):
     axes[0].set_title("Original data")
     axes[0].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
     
-    X_test_out_temp = imp.transform(X_test_out)
-    X_test_out_temp = pd.DataFrame(data=X_test_out_temp,columns=X.columns)
-    sns.scatterplot(X_test_out_temp.loc[:, A], X_test_out_temp.loc[:, B],
+    sns.scatterplot(X_test_imp.loc[:, A], X_test_imp.loc[:, B],
                 hue=y_test_out_Volcan, alpha=0.7, palette=Colores(y_test_out), ax=axes[1])
-    sns.scatterplot(X_test_out_temp[A].iloc[ind_wrong],
-                X_test_out_temp[B].iloc[ind_wrong],
+    sns.scatterplot(X_test_imp[A].iloc[ind_wrong],
+                X_test_imp[B].iloc[ind_wrong],
                 alpha=1,  ax=axes[1], marker='x', color='k',s=10)
     axes[1].set_title("Imputed data")
     axes[1].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
     
-    sns.scatterplot(X_test_out_temp.loc[:, A], X_test_out_temp.loc[:, B],
+    sns.scatterplot(X_test_imp.loc[:, A], X_test_imp.loc[:, B],
                 hue=y_pred_Volcan, alpha=0.7, palette=Colores(y_pred), ax=axes[2])
-    sns.scatterplot(X_test_out_temp[A].iloc[ind_wrong],
-                X_test_out_temp[B].iloc[ind_wrong],
+    sns.scatterplot(X_test_imp[A].iloc[ind_wrong],
+                X_test_imp[B].iloc[ind_wrong],
                 alpha=1,  ax=axes[2], marker='x', color='k',s=10)
     axes[2].set_title("Predicted data")
     axes[2].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
@@ -271,12 +265,13 @@ def gráfico(X_test_out,y_test_out,X,y,A,B):
 
 # Actually plotting
 #choose volcanoes to plot if needed
+ypred = est.predict(T_test_esc)
+Xtest_imp = pd.DataFrame(data=T_test_imp,columns=X.columns)
+
 ind_volcan_test = np.where((y_test == y_test))[0]
 ind_volcan = np.where((y == y))[0]
-gráfico(X_test.iloc[ind_volcan_test.tolist(),:],y_test[ind_volcan_test.tolist()],X.iloc[ind_volcan.tolist(),:],y[ind_volcan.tolist()]
+gráfico(Xtest_imp.iloc[ind_volcan_test.tolist(),:],y_test[ind_volcan_test.tolist()],ypred[ind_volcan_test.tolist()],X.iloc[ind_volcan.tolist(),:],y[ind_volcan.tolist()]
         ,'Al2O3','K2O')
-gráfico(X_test.iloc[ind_volcan_test.tolist(),:],y_test[ind_volcan_test.tolist()],X.iloc[ind_volcan.tolist(),:],y[ind_volcan.tolist()]
-        ,'Sr','K2O') 
 
 
 # Plot confusion matrix
