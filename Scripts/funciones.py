@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
+#import tasplot
 import matplotlib.pyplot as plt
 from matplotlib import colors
 import itertools
+import seaborn as sns
 import matplotlib.patches as ptch
-import cartopy.crs as ccrs
-import cartopy
+from matplotlib.ticker import AutoMinorLocator
+#import cartopy.crs as ccrs
+#import cartopy
 from PIL import Image as PImage
 import scipy.stats
 import os
@@ -17,63 +20,231 @@ def SampleIDD(Data):
     Data = Data.fillna(-1)
 
     for i in range(0,np.size(Data['SampleID'])):
-        if (Data['SamplePoint'][i] == -1):
-            #print("1 --  SamplePoint: {}, SampleID: {}".format(Data['SamplePoint'][i],Data['Sample ID'][i]))
+        if (Data['SampleObservationID'][i] == -1):
+            #print("1 --  SampleObservationID: {}, SampleID: {}".format(Data['SampleObservationID'][i],Data['Sample ID'][i]))
             PorMientras_SID[i]=Data['SampleID'][i]
         else:
-            #print("2 --  SamplePoint: {}, SampleID: {}".format(Data['SamplePoint'][i],Data['Sample ID'][i]))
-            PorMientras_SID[i]=Data['SamplePoint'][i] 
+            #print("2 --  SampleObservationID: {}, SampleID: {}".format(Data['SampleObservationID'][i],Data['Sample ID'][i]))
+            PorMientras_SID[i]=Data['SampleObservationID'][i] 
 			
-    Data['SamplePoint']=PorMientras_SID
+    Data['SampleObservationID']=PorMientras_SID
     Data=Data.replace(to_replace=-1, value=np.nan)
     return Data
 
 def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False,nombre='default'):
 
-    plt.figure(figsize=(7,7))
+    plt.figure(figsize=(5,4))
     ax = plt.axes()
     
     #plot identifyed glass shards
     Data = Data.dropna(subset=[AA,BB])
     Data = Data.reset_index(drop=True)
-    MarkerSize = 11; Alpha = 0.5
-
+	
 #----------------------------- PLOT Data base ---------------------------------
-    
-    for volcan in Data.Volcan.unique():
-        #print('Volcan {}'.format(volcan))
-        temp0 = Data[Data.Volcan == volcan]
-        #print(volcan)
-        for evento in temp0.Evento.unique():
-            #print(evento,temp0.Evento.unique())
-            temp = temp0[temp0.Evento== evento]
+    MarkerSize = 90; Alpha = 0.7
+    for Volcano in Data.Volcano.unique():
+        #print('Volcano {}'.format(Volcano))
+        temp0 = Data[Data.Volcano == Volcano]
+        #print(Volcano)
+        for Event in temp0.Event.unique():
+            #print(Event,temp0.Event.unique())
+            temp = temp0[temp0.Event== Event]
             A = temp[AA].values
             B = temp[BB].values
             Index = temp.first_valid_index()
-            Color, Marker  = simbologia(temp.Volcan[Index],temp.Evento[Index])
+            Color, Marker  = simbologia(temp.Volcano[Index],temp.Event[Index])
             #print(A); print(B);print(Marker, Color)
-            plt.scatter(A,B, color = Color, marker = Marker, alpha=Alpha)
-        
+            plt.scatter(A,B, color = Color,s=MarkerSize, marker = Marker, alpha=Alpha)# , label=Event
 #---------------------------------------plot core data when given
     if isinstance(Data_cores,pd.DataFrame):   
         Data_cores = Data_cores.dropna(subset=[AA,BB])
         Data_cores = Data_cores.reset_index(drop=True)
-        MarkerSize = 200; Alpha = 0.5
+        MarkerSize = 130; Alpha = 0.6
         
-        for core in Data_cores.Core.unique():
-            #print('Volcan {}'.format(volcan))
-            temp0 = Data_cores[Data_cores.Core == core]
-            #print(volcan)
-            for depth in temp0.Depth.unique():
-                #print(evento,temp0.Evento.unique())
-                temp = temp0[temp0.Depth == depth]
-                A = temp[AA].values
-                B = temp[BB].values
-                Index = temp.first_valid_index()
-                Color, Marker  = simbologia_core(temp.Core[Index],temp.Depth[Index])
-                #print(A); print(B);print(Marker, Color)
-                plt.scatter(A,B, color = Color, marker = Marker,s=MarkerSize, edgecolors ='black', label=Data_cores.Label[Index])
+        for label in Data_cores.Label.unique():
+            temp = Data_cores[Data_cores.Label == label]
+            #print(Volcano)
+            A = temp[AA].values
+            B = temp[BB].values
+            Index = temp.first_valid_index()
+            #print('Label {} Core {} Depth {}'.format(label,temp.Core[Index],temp.Depth[Index]))
+            Color, Marker  = simbologia_core(temp.Core[Index],temp.Depth[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A,B, color = Color, marker = Marker,s=MarkerSize, edgecolors ='black',label=Data_cores.Depth[Index])#
+			
+             
+    if (Xmax!='default')&(Xmin!='default'):
+        plt.xlim(Xmin,Xmax)
+
+    if (Ymin!='default')&(Ymax!='default'):
+        plt.ylim(Ymin,Ymax)		
+		
+    plt.xlabel(AA + ' (wt %)', fontsize = 22)
+    plt.ylabel(BB + ' (wt %)', fontsize = 22)
+    #plt.xlabel("La/Yb", fontsize = 22)
+    #plt.ylabel("Zr/Nb", fontsize = 22)
+    #ax.set_xticks([0,5,10,15,20])
+    #ax.set_yticks([10,20,30,40,50])
+    #plt.xlabel(r"SiO$_{\rm 2}$", fontsize = 22)
+    #plt.ylabel(r"K$_{\rm 2}$O", fontsize = 22)
+    #ax.set_xticks([50,60,70,80])
+    #ax.set_yticks([1,2,3,4])
+    ax.tick_params(labelsize = 22,direction='in',axis='both')#,visible = True
+	
+    #ax.grid(axis ='x')
+ #   if Data.Event.unique().size > 90:
+ #       leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
+ #   if (Data.Event.unique().size > 45)&(Data.Event.unique().size < 90):
+ #       leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
+    #if (Data.Event.unique().size < 45):
+    leg=plt.legend(loc='lower right', fancybox=True, ncol=1,fontsize=15,bbox_to_anchor=(1,1))#bbox_to_anchor=(1,1)
+    
+    #leg.get_frame().set_alpha(1)
+    
+    if save:
+        plt.savefig('../Plots/'+nombre+'.png',dpi = 300,bbox_inches='tight'
+    )
+    
+    plt.show()
+	
+def graficar_versus_core_rock(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False,nombre='default'):
+
+    plt.figure(figsize=(5,4))
+    ax = plt.axes()
+    
+    #plot identifyed glass shards
+    Data = Data.dropna(subset=[AA,BB])
+    Data = Data.reset_index(drop=True)
+    Data_glass = Data[(Data.TypeOfRegister=='Pyroclastic material')&(Data.TypeOfAnalysis=='Micro Analytical')]
+    Data_bulk = Data[(Data.TypeOfRegister=='Pyroclastic material')&(Data.TypeOfAnalysis=='Bulk')]
+    Data_lava = Data[(Data.TypeOfRegister=='Effusive material')]
+#----------------------------- PLOT Data base ---------------------------------
+    MarkerSize = 90; Alpha = 0.7
+    for Volcano in Data.Volcano.unique():
+        #print('Volcano {}'.format(Volcano))
+        temp0_glass = Data_glass[Data_glass.Volcano == Volcano]
+        temp0_bulk = Data_bulk[Data_bulk.Volcano == Volcano]
+        temp0_lava = Data_lava[Data_lava.Volcano == Volcano]
+        #print(Volcano)
+        for Event in temp0_glass.Event.unique():
+            #print(Event,temp0.Event.unique())
+            temp_glass = temp0_glass[temp0_glass.Event== Event]
+            A_glass = temp_glass[AA].values;B_glass = temp_glass[BB].values
+            Index = temp_glass.first_valid_index()
+            Color, Marker  = simbologia(temp_glass.Volcano[Index],temp_glass.Event[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A_glass,B_glass, color = Color,s=MarkerSize, marker = Marker, alpha=0.7, label='glass '+ Event)# 
+			
+			
+        for Event in temp0_lava.Event.unique(): 
+            temp_lava = temp0_lava[temp0_lava.Event== Event]
+            Index = temp_lava.first_valid_index()
+            A = temp_lava[AA].values;B = temp_lava[BB].values
+            Color, Marker  = simbologia(temp_lava.Volcano[Index],temp_lava.Event[Index])
+            plt.scatter(A,B, color = 'black',s=MarkerSize, marker = Marker,edgecolors= 'black', alpha= 0.5, label='effusive material '+ Event)# 
+
+        for Event in temp0_bulk.Event.unique():			
+            temp_bulk = temp0_bulk[temp0_bulk.Event== Event]
+            A = temp_bulk[AA].values;B = temp_bulk[BB].values
+            Index = temp_bulk.first_valid_index()
+            Color, Marker  = simbologia(temp_bulk.Volcano[Index],temp_bulk.Event[Index])
+            plt.scatter(A,B, color = Color,s=MarkerSize, marker = Marker,edgecolors= 'black', alpha=0.5, label='bulk tephra '+ Event)# 
+
+#---------------------------------------plot core data when given
+    if isinstance(Data_cores,pd.DataFrame):   
+        Data_cores = Data_cores.dropna(subset=[AA,BB])
+        Data_cores = Data_cores.reset_index(drop=True)
+        MarkerSize = 130; Alpha = 0.6
+        
+        for label in Data_cores.Label.unique():
+
+            temp = Data_cores[Data_cores.Label == label]
+            #print(Volcano)
+            A = temp[AA].values
+            B = temp[BB].values
+            Index = temp.first_valid_index()
+            #print('Label {} Core {} Depth {}'.format(label,temp.Core[Index],temp.Depth[Index]))
+            Color, Marker  = simbologia_core(temp.Core[Index],temp.Depth[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A,B, color = Color, marker = Marker,s=MarkerSize, edgecolors ='black',label=Data_cores.Label[Index])#
+			
+             
+    if (Xmax!='default')&(Xmin!='default'):
+        plt.xlim(Xmin,Xmax)
+
+    if (Ymin!='default')&(Ymax!='default'):
+        plt.ylim(Ymin,Ymax)		
+		
+    plt.xlabel(AA + ' (wt %)', fontsize = 22)
+    plt.ylabel(BB + ' (wt %)', fontsize = 22)
+    #plt.xlabel("La/Yb", fontsize = 22)
+    #plt.ylabel("Zr/Nb", fontsize = 22)
+    #ax.set_xticks([0,5,10,15,20])
+    #ax.set_yticks([10,20,30,40,50])
+    #plt.xlabel(r"SiO$_{\rm 2}$", fontsize = 22)
+    #plt.ylabel(r"K$_{\rm 2}$O", fontsize = 22)
+    #ax.set_xticks([50,60,70,80])
+    #ax.set_yticks([1,2,3,4])
+    ax.tick_params(labelsize = 22,direction='in',axis='both')#,visible = True
+	
+    #ax.grid(axis ='x')
+ #   if Data.Event.unique().size > 90:
+ #       leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
+ #   if (Data.Event.unique().size > 45)&(Data.Event.unique().size < 90):
+ #       leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
+    if (Data.Event.unique().size < 45):
+      leg=plt.legend(loc='upper left', fancybox=True, ncol=1,fontsize=15,bbox_to_anchor=(1,1))#
+    
+    #leg.get_frame().set_alpha(1)
+    
+    if save:
+        plt.savefig('../Plots/'+nombre+'.png',dpi = 300,bbox_inches='tight',bbox_to_anchor=(1,1)
+    )
+    
+    plt.show()	
+	
+def graficar2(AA,BB,Data,Data_cores='default',Alpha=0.5,MarkerSize=110,Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False,nombre='default'):
+
+    plt.figure(figsize=(6,5))
+    ax = plt.axes()
+    
+    #plot identifyed glass shards
+    Data = Data.dropna(subset=[AA,BB])
+    Data = Data.reset_index(drop=True)
+
+#----------------------------- PLOT Data base ---------------------------------
+    
+    for Volcano in Data.Volcano.unique():
+        print('Volcano {}'.format(Volcano))
+        temp0 = Data[Data.Volcano == Volcano]
+        #print(Volcano)
+        for Event in temp0.Event.unique():
+            print(Event,temp0.Event.unique())
+            temp = temp0[temp0.Event== Event]
+            A = temp[AA].values
+            B = temp[BB].values
+            Index = temp.first_valid_index()
+            Color, Marker  = simbologia(temp.Volcano[Index],temp.Event[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A,B, color = Color,s=MarkerSize, marker = Marker, alpha=Alpha, label=Event)#
             
+#---------------------------------------plot core data when given
+    if isinstance(Data_cores,pd.DataFrame):   
+        Data_cores = Data_cores.dropna(subset=[AA,BB])
+        Data_cores = Data_cores.reset_index(drop=True)
+        MarkerSize = 130
+        
+        for label in Data_cores.Label.unique():
+            #print('Volcano {}'.format(Volcano))
+            temp = Data_cores[Data_cores.Label == label]
+            #print(Volcano)
+            A = temp[AA].values
+            B = temp[BB].values
+            Index = temp.first_valid_index()
+            Color, Marker  = simbologia_core(temp.Core[Index],temp.Depth[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A,B, color = Color, marker = Marker,s=MarkerSize, edgecolors ='black', label=Data_cores.Depth[Index])#
+            #print(temp.SiO2[Index])
     if (Xmax!='default')&(Xmin!='default'):
         plt.xlim(Xmin,Xmax)
 
@@ -82,216 +253,232 @@ def graficar_versus_core(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='de
 		
     plt.xlabel(AA, fontsize = 22)
     plt.ylabel(BB, fontsize = 22)
-    ax.tick_params(labelsize = 22,axis='both', which='major')
-    #if Data.Evento.unique().size > 90:
+    #plt.xlabel("La/Yb", fontsize = 22)
+    #plt.ylabel("Zr/Nb", fontsize = 22)
+    #ax.set_xticks([0,5,10,15,20])
+    #ax.set_yticks([10,20,30,40,50])
+    #plt.xlabel(r"Al$_{\rm 2}$O$_{\rm 3}$", fontsize = 22)
+    plt.ylabel(r"K$_{\rm 2}$O", fontsize = 22)
+    #ax.set_xticks([50,60,70,80])
+    #ax.set_yticks([1,2,3,4])
+	
+	#putting ticks if necesary
+    #ax.yaxis.set_minor_locator(AutoMinorLocator())
+    #ax.xaxis.set_minor_locator(AutoMinorLocator())
+
+    #ax.tick_params(axis='both', which='major', labelsize=13, length=7, width=1.3)
+    #ax.tick_params(which='minor', length=5)
+    #ax.set_yticks(np.linspace(Ymin,Ymax,11))
+    #ax.set_xticks(np.linspace(Xmin,Xmax,9))
+	
+    ax.tick_params(labelsize = 22,direction='in',axis='both')
+    #ax.grid(axis ='x')
+    #if Data.Event.unique().size > 90:
     #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
-    #if (Data.Evento.unique().size > 45)&(Data.Evento.unique().size < 90):
+    #if (Data.Event.unique().size > 45)&(Data.Event.unique().size < 90):
     #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
-    #if (Data.Evento.unique().size < 45):
-    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.35,1),ncol=1,fontsize=14)
+    #if (Data.Event.unique().size < 45):
+    leg=plt.legend(loc='upper left', fancybox=True, ncol=1,fontsize=18)#bbox_to_anchor=(1,1)
     
-    leg.get_frame().set_alpha(1)
+    #leg.get_frame().set_alpha(1)
     
     if save:
         plt.savefig('../Plots/'+nombre+'.png',dpi = 300,bbox_inches='tight')
     
     plt.show()
 	
+def graficar_sections(AA,BB,Data,Data_cores='default',Alpha=0.5,MarkerSize=110,MarkeR='o',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False,nombre='default'):
 
-def graficar5x5(AA,BB,Data,Data_cores='default',Xmin='default',Xmax='default',Ymin='default',Ymax='default',save=False):
-
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(5,4))
     ax = plt.axes()
     
     #plot identifyed glass shards
     Data = Data.dropna(subset=[AA,BB])
-    Data = Data.reset_index(drop=True)
-    Datas = Data.values
-    A = Data[AA].values
-    B = Data[BB].values
-    Evento = 0
-    Volcan = 0
-    Eventos = Data['Evento'].values
-    Volcanes = Data['Volcan'].values    
-    
-    for i in range(0,np.size(Datas[:,1])):
-	
-        if Evento == Eventos[i]:
-            if Volcanes[i] == Volcan:
-                #print("1 Volcan {}, Core {} ".format(Volcanes[i],Eventos[i]))
-                Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-                plt.plot(A[i],B[i], color = Color, marker = Marker,markersize=12, alpha=0.7,markeredgecolor = Color)
-            else:
-                Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-                plt.plot(A[i],B[i], color = Color, marker = Marker, markersize = 12,alpha=0.7, label = Eventos[i], markeredgecolor = Color)
-                Volcan = Volcanes[i]
-
-        else:
-            #print("2 Volcan {}, Evento {} ".format(Volcanes[i],Eventos[i]))
-            Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-            plt.plot(A[i],B[i], color = Color, marker = Marker, markersize = 12,alpha=0.7, label = Eventos[i], markeredgecolor = Color)
-            Evento = Eventos[i]
-            Volcan = Volcanes[i]
-                           
-   #---------------------------------------plot core data when given
+    Data = Data.reset_index(drop=True) 
+#---------------------------------------plot core data when given
     if isinstance(Data_cores,pd.DataFrame):   
         Data_cores = Data_cores.dropna(subset=[AA,BB])
         Data_cores = Data_cores.reset_index(drop=True)
-        Depth = Data_cores['Depth']
-        A = Data_cores[AA].values
-        B = Data_cores[BB].values
-        Core = Data_cores['Core']
-        Depth0 = 0
-        Core0 = 0
-        markers = itertools.cycle(('o','o','v','^','p','<','h','o','v','s','^','p','<','h','>','h','>','X','D','d', 'o','v','s','^','p','d','>','X','D',))
-        colors = itertools.cycle(('black','white'))
-        Color = next(colors)
-        Marker = next(markers)
-	
-        for i in range(0,np.size(Depth)):
-            if (Depth[i] == Depth0)&(Core[i] == Core0):
-                Color, Marker  = simbologia_core(Core[i],Depth[i])
-                plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=13, markeredgecolor = 'black', alpha=1)
-
-            else:
-                Color, Marker  = simbologia_core(Core[i],Depth[i])
-                plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=13,label=Core[i]+ ' '+ Depth[i],markeredgecolor = 'black', alpha=1)
-                Depth0 = Depth[i]
-                Core0 = Core[i]
-	#    if i == (np.size(Depth)-1):
-	#	    print(i)
-	#        plt.plot(A[i], B[i],marker = Marker, color = Color, markersize=13,label=Core[i]+ ''+ Depth[i],markeredgecolor = 'black', alpha=1)
-            
+        MarkerSize = 130
+        
+        for label in Data_cores.Label.unique():
+            #print('Volcano {}'.format(Volcano))
+            temp = Data_cores[Data_cores.Label == label]
+            #print(Volcano)
+            A = temp[AA].values
+            B = temp[BB].values
+            Index = temp.first_valid_index()
+            Color, Marker  = simbologia_core(temp.Core[Index],temp.Depth[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A,B, color = Color, marker = Marker,s=MarkerSize, edgecolors ='black',alpha=0.7,label=Data_cores.Label[Index])#
+            #print(temp.SiO2[Index])
+			
+#----------------------------- PLOT Data base ---------------------------------
+    
+    for Volcano in Data.Volcano.unique():
+        #print('Volcano {}'.format(Volcano))
+        temp0 = Data[Data.Volcano == Volcano]
+        #print(Volcano)
+        for seccion in temp0.Seccion.unique():
+            #print(Event,temp0.Event.unique())
+            temp = temp0[temp0.Seccion == seccion]
+            A = temp[AA].values
+            B = temp[BB].values
+            Index = temp.first_valid_index()
+            Color, Marker  = simbologia(temp.Volcano[Index],temp.Event[Index])
+            #print(A); print(B);print(Marker, Color)
+            plt.scatter(A,B, color = Color,s=MarkerSize, marker = MarkeR,edgecolors ='black', alpha=0.8, label=Data.SubSeccion[Index])#
+            			
     if (Xmax!='default')&(Xmin!='default'):
         plt.xlim(Xmin,Xmax)
 
     if (Ymin!='default')&(Ymax!='default'):
         plt.ylim(Ymin,Ymax)		
 		
-    plt.xlabel(AA, fontsize = 20)
-    plt.ylabel(BB, fontsize = 20)
-    ax.tick_params(labelsize = 20)
+    plt.xlabel(AA, fontsize = 22)
+    plt.ylabel(BB, fontsize = 22)
+    #plt.xlabel("La/Yb", fontsize = 22)
+    #plt.ylabel("Zr/Nb", fontsize = 22)
+    #ax.set_xticks([0,5,10,15,20])
+    #ax.set_yticks([10,20,30,40,50])
+    plt.xlabel(r"Al$_{\rm 2}$O$_{\rm }$", fontsize = 22)
+    plt.ylabel(r"K$_{\rm 2}$O", fontsize = 22)
+    #ax.set_xticks([50,60,70,80])
+    #ax.set_yticks([1,2,3,4])
+	
+	#putting ticks if necesary
+    #ax.yaxis.set_minor_locator(AutoMinorLocator())
+    #ax.xaxis.set_minor_locator(AutoMinorLocator())
 
-    if Data.Evento.unique().size > 90:
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
-    if (Data.Evento.unique().size > 45)&(Data.Evento.unique().size < 90):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
-    if (Data.Evento.unique().size < 45):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=1,fontsize=15)
+    #ax.tick_params(axis='both', which='major', labelsize=13, length=7, width=1.3)
+    #ax.tick_params(which='minor', length=5)
+    #ax.set_yticks(np.linspace(Ymin,Ymax,11))
+    #ax.set_xticks(np.linspace(Xmin,Xmax,9))
+	
+    ax.tick_params(labelsize = 22,direction='in',axis='both')
+    #ax.grid(axis ='x')
+    #if Data.Event.unique().size > 90:
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
+    #if (Data.Event.unique().size > 45)&(Data.Event.unique().size < 90):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.8,1),ncol=2,fontsize=13)
+    if (Data.Event.unique().size < 45):
+        leg=plt.legend(loc='lower right', fancybox=True, ncol=1,fontsize=14)#bbox_to_anchor=(1,1)
     
-    leg.get_frame().set_alpha(1)
+    #leg.get_frame().set_alpha(1)
     
     if save:
-        plt.savefig('../Plots/'+AA+'vs'+BB+'.png',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')
+        plt.savefig('../Plots/'+nombre+'.png',dpi = 300,bbox_inches='tight')
     
     plt.show()
-
-def simbologia(volcan,evento):
+	
+def simbologia(volcano,event):
 
     simbología = pd.read_excel('../Scripts/Simbologia.xlsx')
-    EventO = simbología.loc[simbología['Volcan'] == volcan]
-    EventO = EventO.loc[EventO['Evento'] == evento]
-    coloR = EventO.values[0,2]
-    markeR = EventO.values[0,3]
+    Event = simbología.loc[simbología['Volcano'] == volcano]
+    Event = Event.loc[Event['Event'] == event]
+    coloR = Event.values[0,2]
+    markeR = Event.values[0,3]
     return coloR, markeR
 
 def simbologia_core(testigo,profundidad):
 
     simbología = pd.read_excel('../Scripts/SimbologiaTestigos.xlsx')
-    EventO = simbología.loc[simbología['Testigo'] == testigo]
-    EventO = EventO.loc[EventO['Profundidad'] == profundidad]
-    Index = EventO.first_valid_index()
-    coloR = EventO.Color[Index]
-    markeR = EventO.Simbología[Index]
+    Event = simbología.loc[simbología['Testigo'] == testigo]
+    Event = Event.loc[Event['Profundidad'] == profundidad]
+    Index = Event.first_valid_index()
+    coloR = Event.Color[Index]
+    markeR = Event.Simbología[Index]
     return coloR, markeR
-	          	          
-def grafico_edades(Data,Data_cores ='default',save=False):
+	          	          	
+def grafico_edades(Data,Data_cores ='default',save=False,nombre='default'):
     plt.figure(figsize=(2.5,9))
     ax = plt.axes()
     
     Data_magnitud = Data.copy()
-    Data['Historic'] = Data['Edad'].str.contains('Historic')
-    Data = Data[Data['Historic']!= True]
-    Data = Data.dropna(subset=['Edad'])
+    Data_magnitud.Magnitude = Data_magnitud.Magnitude.replace(np.nan,0)
+    Data = Data.dropna(subset=['14C_Age'],axis=0,how='any')
     Data = Data.reset_index(drop=True)
-    Data.Edad = Data.Edad.values/1000
-    Data.ErrorEdad = Data.ErrorEdad.values/1000
-    Eventos = Data['Evento'].values
-    Volcanes = Data['Volcan'].values
+    Data['14C_Age'] = Data['14C_Age'].values/1000
+    Data['14C_Age_Error'] = Data['14C_Age_Error'].values/1000
+    Data['Edad'] = Data['14C_Age']
+    Data['ErrorEdad'] = Data['14C_Age_Error']
+    
+    Events = Data['Event'].values
+    Volcanoes = Data['Volcano'].values
     Sample = Data['SampleID'].values
     i = 0
     j = 0
     k = 0
-    #print(Eventos)
-    while i < np.size(Eventos):
+    #print(Events)
+    while i < np.size(Events):
 
-        #print("0 {}, {}".format(Eventos[i],Volcanes[i]))
-        Color, Marker  = simbologia(Volcanes[i],Eventos[i])
+        #print("0 {}, {}".format(Events[i],Volcanoes[i]))
+        Color, Marker  = simbologia(Volcanoes[i],Events[i])
         marker_edge = 'black'
-        Data_evento = Data.loc[Data['Volcan'] == Volcanes[i]]  
-        Data_evento = Data_evento.sort_values(by=['Evento'])	
-        Data_evento = Data_evento.loc[Data_evento['Evento'] == Eventos[i]]
-        Data_magnitud_evento = Data_magnitud.loc[Data_magnitud['Volcan'] == Volcanes[i]]
-        Data_magnitud_evento = Data_magnitud_evento.loc[Data_magnitud_evento['Evento'] == Eventos[i]]
-        Magnitud = scipy.stats.mode(Data_magnitud_evento.Magnitud)
+        Data_Event = Data.loc[Data['Volcano'] == Volcanoes[i]]  
+        Data_Event = Data_Event.sort_values(by=['Event'])	
+        Data_Event = Data_Event.loc[Data_Event['Event'] == Events[i]]
+        Data_magnitud_Event = Data_magnitud.loc[Data_magnitud['Volcano'] == Volcanoes[i]]
+        Data_magnitud_Event = Data_magnitud_Event.loc[Data_magnitud_Event['Event'] == Events[i]]
+        Magnitud = scipy.stats.mode(Data_magnitud_Event.Magnitude)
         Magnitud = Magnitud[0]
-
-        if Data_evento.shape[0] != 1: #Eventos con más de una datación 14C
+        
+        if Data_Event.shape[0] != 1: #Events con más de una datación 14C
             
-            #print("1 {}, {}, {}".format(Eventos[i],Volcanes[i],Data.SamplePoint[i]))
-            if Eventos[i] != 'Unknown': #Es un evento con un nombre asignado 
-                if Magnitud==0: #la magnitud del evento es desconocida
-                    #print("2 {}, {}, {}, {}, {}".format(Eventos[i],Volcanes[i],Data.SamplePoint[i],Data_evento['Edad'].min(),Data_evento['Edad'].max()))
-                    rect = ptch.Rectangle((-1.5,Data_evento['Edad'].min()),1.5,Data_evento['Edad'].max()-Data_evento['Edad'].min(), facecolor = Color,alpha=0.4,linewidth = 0.25)
-                    simbolo = ax.plot(-2,Data_evento['Edad'].min() +(Data_evento['Edad'].max()-Data_evento['Edad'].min())/2, color = Color, marker = Marker, markersize=8,markeredgecolor=marker_edge, label=Eventos[i],alpha=0.8)
-                    ax.text(-4,Data_evento['Edad'].min() +(Data_evento['Edad'].max()-Data_evento['Edad'].min())/2+.07,Eventos[i],rotation=0,color='black',fontsize=8)
+            #print("1 {}, {}, {}, {}".format(Events[i],Volcanoes[i],Data.SampleObservationID[i],Magnitud))
+            if Events[i] != 'Unknown': #Es un Event con un nombre asignado 
+                if Magnitud==0: #la magnitud del Event es desconocida
+                    #print("2 {}, {}, {}, {}, {}".format(Events[i],Volcanoes[i],Data.SampleObservationID[i],Data_Event['Edad'].min(),Data_Event['Edad'].max()))
+                    rect = ptch.Rectangle((-1.5,Data_Event['Edad'].min()),1.5,Data_Event['Edad'].max()-Data_Event['Edad'].min(), facecolor = Color,alpha=0.4,linewidth = 0.25)
+                    simbolo = ax.plot(-2,Data_Event['Edad'].min() +(Data_Event['Edad'].max()-Data_Event['Edad'].min())/2, color = Color, marker = Marker, markersize=8,markeredgecolor=marker_edge, label=Events[i],alpha=0.8)
+                    #ax.text(-4,Data_Event['Edad'].min() +(Data_Event['Edad'].max()-Data_Event['Edad'].min())/2+.07,Events[i],rotation=0,color='black',fontsize=8)
                     ax.add_patch(rect)
-                    while j < Data_evento.shape[0]:
-                        rect = ptch.Rectangle((-1.5,Data_evento.Edad.values[j]),1.5,Data_evento.ErrorEdad.values[j],facecolor = Color,edgecolor='black',linewidth = 0.25)
+                    while j < Data_Event.shape[0]:
+                        rect = ptch.Rectangle((-1.5,Data_Event.Edad.values[j]),1.5,Data_Event.ErrorEdad.values[j],facecolor = Color,edgecolor='black',linewidth = 0.25)
                         j=j+1
                         ax.add_patch(rect) 
-                else: #la magnitud del evento es conocida
-                    #print("3 {}, {}, {}, {}, {}".format(Eventos[i],Volcanes[i],Data.SamplePoint[i],Data_evento['Edad'].min(),Data_evento['Edad'].max()))
-                    rect = ptch.Rectangle((0,Data_evento['Edad'].min()),Magnitud,Data_evento['Edad'].max()-Data_evento['Edad'].min(),facecolor = Color,alpha=0.4,linewidth = 0.25)
-                    simbolo = ax.plot(Magnitud+.7,Data_evento['Edad'].min() +(Data_evento['Edad'].max()-Data_evento['Edad'].min())/2,color = Color, marker = Marker, markersize=10,markeredgecolor=marker_edge, label=Eventos[i],alpha=0.8)
-                    ax.text(Magnitud+1.6,Data_evento['Edad'].min() +(Data_evento['Edad'].max()-Data_evento['Edad'].min())/2+.07,Eventos[i],rotation=0,color='black',fontsize=8)
+                else: #la magnitud del Event es conocida
+                    #print("3 {}, {}, {}, {}, {}".format(Events[i],Volcanoes[i],Data.SampleObservationID[i],Data_Event['Edad'].min(),Data_Event['Edad'].max()))
+                    rect = ptch.Rectangle((0,Data_Event['Edad'].min()),Magnitud,Data_Event['Edad'].max()-Data_Event['Edad'].min(),facecolor = Color,alpha=0.4,linewidth = 0.25)
+                    simbolo = ax.plot(Magnitud+.7,Data_Event['Edad'].min() +(Data_Event['Edad'].max()-Data_Event['Edad'].min())/2,color = Color, marker = Marker, markersize=10,markeredgecolor=marker_edge, label=Events[i],alpha=0.8)
+                    #ax.text(Magnitud+1.6,Data_Event['Edad'].min() +(Data_Event['Edad'].max()-Data_Event['Edad'].min())/2+.07,Events[i],rotation=0,color='black',fontsize=8)
                     ax.add_patch(rect)
-                    while j < Data_evento.shape[0]:
-                        rect = ptch.Rectangle((0,Data_evento.Edad.values[j]),Magnitud,Data_evento.ErrorEdad.values[j],facecolor = Color,alpha=.7,edgecolor='black',linewidth = 0.25)
+                    while j < Data_Event.shape[0]:
+                        rect = ptch.Rectangle((0,Data_Event.Edad.values[j]),Magnitud,Data_Event.ErrorEdad.values[j],facecolor = Color,alpha=.7,edgecolor='black',linewidth = 0.25)
                         j=j+1
                         ax.add_patch(rect)
-            else: #son varias dataciones de un Volcan pero no se sabe el evento
-                 while j < Data_evento.shape[0]:
-                    #print("4 {}, {}, {}".format(Eventos[i],Volcanes[i],Data.SamplePoint[i]))
-                    rect = ptch.Rectangle((0,Data_evento.Edad.values[j]),Magnitud,Data_evento.ErrorEdad.values[j], facecolor = Color,linewidth = 0.25)
-                    simbolo = ax.plot(0,Data_evento.Edad.values[j], color = Color, marker = Marker, markersize=8,markeredgecolor='black',alpha=0.7)
+            else: #son varias dataciones de un Volcano pero no se sabe el Event
+                 while j < Data_Event.shape[0]:
+                    #print("4 {}, {}, {}".format(Events[i],Volcanoes[i],Data.SampleObservationID[i]))
+                    rect = ptch.Rectangle((0,Data_Event.Edad.values[j]),Magnitud,Data_Event.ErrorEdad.values[j], facecolor = Color,linewidth = 0.25)
+                    simbolo = ax.plot(0,Data_Event.Edad.values[j], color = Color, marker = Marker, markersize=8,markeredgecolor='black',alpha=0.7)
                     j=j+1
                     ax.add_patch(rect)
-        else: #Eventos con una datación 14C
-            #print("-0 {}".format(Eventos[i]))			
-            if Eventos[i] != 'Unknown': #Es un evento con un nombre asignado 
-                if Magnitud==0: #la magnitud del evento es desconocida
-                    #print("5 {}, {}, {}".format(Eventos[i],Volcanes[i],Data.SamplePoint[i]))
-                    simbolo = ax.plot(-2,Data_evento['Edad'].min(),color = Color, marker = Marker, markersize=7,markeredgecolor=marker_edge, alpha=0.8, label=Eventos[i])
-                    rect = ptch.Rectangle((-1.5,Data_evento['Edad'].min()),1.5,Data_evento.ErrorEdad.values[j], facecolor = Color,edgecolor='black',linewidth = 0.25) #este rectangulo es para que el codig no reclame por el addpatch
-                    ax.text(-4,Data_evento['Edad'].min() +(Data_evento['Edad'].max()-Data_evento['Edad'].min())/2+.07,Eventos[i],rotation=0,color='black',fontsize=8)
+        else: #Events con una datación 14C
+            #print("-0 {}".format(Events[i]))			
+            if Events[i] != 'Unknown': #Es un Event con un nombre asignado 
+                if Magnitud==0: #la magnitud del Event es desconocida
+                    #print("5 {}, {}, {}".format(Events[i],Volcanoes[i],Data.SampleObservationID[i]))
+                    simbolo = ax.plot(-2,Data_Event['Edad'].min(),color = Color, marker = Marker, markersize=7,markeredgecolor=marker_edge, alpha=0.8, label=Events[i])
+                    rect = ptch.Rectangle((-1.5,Data_Event['Edad'].min()),1.5,Data_Event.ErrorEdad.values[j], facecolor = Color,edgecolor='black',linewidth = 0.25) #este rectangulo es para que el codig no reclame por el addpatch
+                    #ax.text(-4,Data_Event['Edad'].min() +(Data_Event['Edad'].max()-Data_Event['Edad'].min())/2+.07,Events[i],rotation=0,color='black',fontsize=8)
                     ax.add_patch(rect)
-                else: #la magnitud del evento es conocida
-                    #print("6 {}, {}, {}".format(Eventos[i],Volcanes[i],Data.SamplePoint[i]))
-                    rect = ptch.Rectangle((0,Data_evento['Edad'].min()), Magnitud, Data_evento.ErrorEdad.values[j], facecolor = Color,linewidth = 0.25)
-                    simbolo = ax.plot(Magnitud+.7, Data_evento['Edad'].min(), color = Color, marker = Marker, markersize=10,markeredgecolor=marker_edge, alpha=0.8, label=Eventos[i])
-                    ax.text(Magnitud+1.6,Data_evento['Edad'].min()+.07,Eventos[i],rotation=0,color='black',fontsize=8)
+                else: #la magnitud del Event es conocida
+                    #print("6 {}, {}, {}".format(Events[i],Volcanoes[i],Data.SampleObservationID[i]))
+                    rect = ptch.Rectangle((0,Data_Event['Edad'].min()), Magnitud, Data_Event.ErrorEdad.values[j], facecolor = Color,linewidth = 0.25)
+                    simbolo = ax.plot(Magnitud+.7, Data_Event['Edad'].min(), color = Color, marker = Marker, markersize=10,markeredgecolor=marker_edge, alpha=0.8, label=Events[i])
+                    #ax.text(Magnitud+1.6,Data_Event['Edad'].min()+.07,Events[i],rotation=0,color='black',fontsize=8)
                     ax.add_patch(rect)
-            else: #una datación de un evento unknown
-                    #print("7 {}, {}, {}".format(Eventos[i],Volcanes[i],Data.SamplePoint[i]))
-                    rect = ptch.Rectangle((0,Data_evento.Edad.values[j]), 0.05 ,Data_evento.ErrorEdad.values[j], facecolor = Color,alpha=1,edgecolor='black',linewidth = 0.25)
-                    simbolo = ax.plot(0,Data_evento.Edad.values[j], color = Color, marker = Marker, markersize=8,markeredgecolor='black',alpha=0.8)
+            else: #una datación de un Event unknown
+                    #print("7 {}, {}, {}".format(Events[i],Volcanoes[i],Data.SampleObservationID[i]))
+                    rect = ptch.Rectangle((0,Data_Event.Edad.values[j]), 0.05 ,Data_Event.ErrorEdad.values[j], facecolor = Color,alpha=1,edgecolor='black',linewidth = 0.25)
+                    simbolo = ax.plot(0,Data_Event.Edad.values[j], color = Color, marker = Marker, markersize=8,markeredgecolor='black',alpha=0.8)
                     ax.add_patch(rect)
                     
         #ax.add_patch(rect)
-        #txt = ax.text(Data_evento['Edad'].min(),Magnitud[i]+1.5 ,Evento[i],weight='bold',color='black')
+        #txt = ax.text(Data_Event['Edad'].min(),Magnitud[i]+1.5 ,Event[i],weight='bold',color='black')
         #txt.set_rotation(45)
-        i = i+ Data_evento.shape[0]
+        i = i+ Data_Event.shape[0]
         j = 0
         #print(i)		
     #print(Data_cores)
@@ -306,14 +493,14 @@ def grafico_edades(Data,Data_cores ='default',save=False):
     
         while k < (len(Data_cores)):
             Color, Marker  = simbologia_core(Core[k],Depth[k])
-            simbolo = ax.plot( 0,Data_cores.Edad.values[k], color = Color, marker = Marker, markersize=12,markeredgecolor='black',alpha=1,label=Core[k]+' '+Depth[k])
+            simbolo = ax.plot( 0,Data_cores.Edad.values[k], color = Color, marker = Marker, markersize=12,markeredgecolor='black',alpha=1,label=Data_cores.Label[k])
             #txt = ax.text(0.1,Data_cores.Edad.values[k]-0.1,Data_cores.Depth.values[k],rotation=90,weight='bold',color='black',fontsize=17)
             k = k+1    
     
     #tags de qué representa cada línea
-    #conMagnitud = ax.text(18000,4,'Eventos con Magnitud estimada',weight='bold',color='black',fontsize=15)
-    #sinMagnitud = ax.text(18000,-2,'Evento sin Magnitud estimada',weight='bold',color='black',fontsize=15)
-    #unknown = ax.text(18000,-4,'Evento Unknown',weight='bold',color='black',fontsize=15)
+    #conMagnitud = ax.text(18000,4,'Events con Magnitud estimada',weight='bold',color='black',fontsize=15)
+    #sinMagnitud = ax.text(18000,-2,'Event sin Magnitud estimada',weight='bold',color='black',fontsize=15)
+    #unknown = ax.text(18000,-4,'Event Unknown',weight='bold',color='black',fontsize=15)
     
         
     ax.set_ylabel('14C age (kyears BP)', fontsize=12)
@@ -322,16 +509,16 @@ def grafico_edades(Data,Data_cores ='default',save=False):
     #ax.set_xticklabels((np.linspace(0,15,6),0))
     ax.tick_params(labelsize = 12)
 
-    #if Data.Evento.unique().size > 60:
+    #if Data.Event.unique().size > 60:
     #    leg=ax.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.7,1),ncol=3,fontsize=19)
         
-    #if (Data.Evento.unique().size > 20)&(Data.Evento.unique().size < 60):
+    #if (Data.Event.unique().size > 20)&(Data.Event.unique().size < 60):
     #    leg=ax.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.45,1),ncol=2,fontsize=19)
         
-    #if (Data.Evento.unique().size < 20):
+    #if (Data.Event.unique().size < 20):
     #    leg=ax.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.27,1),ncol=1,fontsize=19)
      
-    ax.legend(loc='lower left', fancybox=True, bbox_to_anchor=(1,0),ncol=1,fontsize=8)	 
+    ax.legend(loc='lower left', fancybox=True, bbox_to_anchor=(1,0),ncol=2,fontsize=10)	 
     #leg.get_frame().set_alpha(0.5)
     plt.yticks(np.linspace(0,16,17))
     plt.xticks(np.linspace(0,6,7))
@@ -340,7 +527,7 @@ def grafico_edades(Data,Data_cores ='default',save=False):
     ax.set_xlim(-5,9)
         
     if save:
-        plt.savefig('../Plots/Dataciones.pdf',dpi = 300,bbox_inches='tight')
+        plt.savefig('../Plots/' + nombre +'.pdf',dpi = 300,bbox_inches='tight')
     
     plt.show()
 
@@ -351,77 +538,78 @@ AVZ= PImage.open(AVZ)
 Ambos="../Scripts/Images/Ambos2.jpg" 
 Ambos= PImage.open(Ambos)
 
-def grafico_posicion(Datas,zona,VOLCANES='default', texto='no',save=False):
+def grafico_posicion(Datas,zona,VolcanoES='default', texto='no',save=False,nombre='default'):
 
 
     if zona == 'Ambos':
-        MarkerSize = 10
+        MarkerSize = 6
     else:
-        MarkerSize = 10
+        MarkerSize = 8
 		
-    plt.figure(figsize=(20,20))
+    plt.figure(figsize=(10,10))
     ax = plt.axes(projection = ccrs.PlateCarree())
     Datas = Datas.dropna(how='any',subset=['Latitud']) 
     Datas = Datas.reset_index(drop=True)
-    Volcanes = Datas.Volcan
-    Eventos = Datas.Evento
+    Volcanoes = Datas.Volcano
+    Events = Datas.Event
     Lon =  Datas.Longitud
     Lat =  Datas.Latitud
     
-    for volcan in Datas.Volcan.unique():
-        #print('Volcan {}'.format(volcan))
-        temp0 = Datas[Datas.Volcan == volcan]
-        #print(volcan)
-        for evento in temp0.Evento.unique():
-            #print(evento,temp0.Evento.unique())
-            temp = temp0[temp0.Evento== evento]
+    for Volcano in Datas.Volcano.unique():
+        #print('Volcano {}'.format(Volcano))
+        temp0 = Datas[Datas.Volcano == Volcano]
+        #print(Volcano)
+        for Event in temp0.Event.unique():
+            #print(Event,temp0.Event.unique())
+            temp = temp0[temp0.Event== Event]
             for seccion in temp.Latitud.unique():
                 temp2 = temp[temp.Latitud == seccion]
                 Index = temp2.first_valid_index()
-                #print(Datas.SamplePoint[Index])
+                #print(Datas.SampleObservationID[Index])
                 x,y = (temp2.Longitud[Index],temp2.Latitud[Index])
-                Color, Marker  = simbologia(temp2.Volcan[Index],temp2.Evento[Index])
-                if evento == 'Unknown':
-                    #print("1 {}, {}, i: {}".format(evento,volcan,seccion))
+                Color, Marker  = simbologia(temp2.Volcano[Index],temp2.Event[Index])
+                if Event == 'Unknown':
+                    #print("1 {}, {}, i: {}".format(Event,Volcano,seccion))
                     marker_edge = 'white'
                 else:
-                    #print("2 {}, {}, i: {}".format(evento,volcan,seccion))
+                    #print("2 {}, {}, i: {}".format(Event,Volcano,seccion))
                     marker_edge = 'black'
-                plt.plot(x,y, color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor=Color , alpha=1)
+                plt.plot(x,y, color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize, alpha=.8)#,markeredgecolor='black'
             
             x,y = (temp2.Longitud[Index],temp2.Latitud[Index])
-            Color, Marker  = simbologia(temp2.Volcan[Index],temp2.Evento[Index])
-            #print('evento {}'.format(evento))
-            plt.plot(x,y, color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor=Color, alpha=1,label=evento)
+            Color, Marker  = simbologia(temp2.Volcano[Index],temp2.Event[Index])
+            #print('Event {}'.format(Event))
+            plt.plot(x,y, color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize, alpha=1,label=Event)#,markeredgecolor='black'
         
             
         x,y = (temp0.Longitud[Index],temp0.Latitud[Index])
-        Color, Marker  = simbologia(temp0.Volcan[Index],temp0.Evento[Index])
-        #print('Volcan {}'.format(volcan))
-        #plt.plot(x,y, color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor=marker_edge, alpha=0.6,label=volcan)
+        Color, Marker  = simbologia(temp0.Volcano[Index],temp0.Event[Index])
+        #print('Volcano {}'.format(Volcano))
+        #plt.plot(x,y, color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor=marker_edge, alpha=0.6,label=Volcano)
                 		
-    #plt.plot(Lon[np.size(Eventos)-1],Lat[np.size(Eventos)-1], color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor=marker_edge, alpha=0.6])
+    #plt.plot(Lon[np.size(Events)-1],Lat[np.size(Events)-1], color = Color, marker = Marker, transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor=marker_edge, alpha=0.6])
 	
     if zona == 'Ambos':
-        MarkerSize = 27
-        FontSize=20
+        MarkerSize = 18
+        FontSize=10
     else:
-        MarkerSize = 45
+        MarkerSize = 28
         FontSize=24
-    VOLCANES = VOLCANES.reset_index(drop=True)	
-    for i in range(0,np.size(VOLCANES.Volcan)):
-        Color, Marker  = simbologia(VOLCANES.Volcan[i],'Unknown')
-        x,y = (VOLCANES.Longitud[i],VOLCANES.Latitud[i])
-        if (VOLCANES.Volcan[i] == 'MD07-3098')|(VOLCANES.Volcan[i] == 'MD07-3100')|(VOLCANES.Volcan[i] == 'MD07-3081')|(VOLCANES.Volcan[i] == 'MD07-3082')|(VOLCANES.Volcan[i] == 'MD07-3088')|(VOLCANES.Volcan[i] == 'MD07-3119'):
-            #print(VOLCANES.Volcan[i])
+		
+    VolcanoES = VolcanoES.reset_index(drop=True)	
+    for i in range(0,np.size(VolcanoES.Volcano)):
+        Color, Marker  = simbologia(VolcanoES.Volcano[i],'Unknown')
+        x,y = (VolcanoES.Longitud[i],VolcanoES.Latitud[i])
+        if (VolcanoES.Volcano[i] == 'MD07-3098')|(VolcanoES.Volcano[i] == 'MD07-3100')|(VolcanoES.Volcano[i] == 'MD07-3081')|(VolcanoES.Volcano[i] == 'MD07-3082')|(VolcanoES.Volcano[i] == 'MD07-3088')|(VolcanoES.Volcano[i] == 'MD07-3119'):
+            #print(VolcanoES.Volcano[i])
             MarkerSize = 15			
-            plt.plot(x,y, color = Color, marker = 'o', transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor='black',alpha=0.5)#,markeredgewidth=1 + i/10
+            plt.plot(x,y, color = Color, marker = 'o', transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor='black',alpha=0.7)#,markeredgewidth=1 + i/10
         else:
-            #print(VOLCANES.Volcan[i])
+            #print(VolcanoES.Volcano[i])
             plt.plot(x,y, color = Color, marker = '^', transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor='black',alpha=0.7)#,markeredgewidth=1 + i/10
         
         if texto == 'sí':
-            ax.text(x- 0.2, y+0.22,VOLCANES.Volcan[i], transform=ccrs.PlateCarree(),weight='bold',color='w',fontsize=24)
+            ax.text(x+ 1.2, y+0.22,VolcanoES.Volcano[i], transform=ccrs.PlateCarree(),weight='bold',color='black',fontsize=11)
         
 		
     if zona == 'SVZ':
@@ -437,35 +625,116 @@ def grafico_posicion(Datas,zona,VOLCANES='default', texto='no',save=False):
         ax.imshow(Ambos,extent=[-77.2699,-64.8598,-56.3484,-37.6805],origin='upper', transform = ccrs.PlateCarree(),alpha=0.55)    
         ax.set_extent([-77.2699,-64.8598,-56.3484,-37.6805],crs = ccrs.PlateCarree())		
 
+	
     ax.coastlines(resolution='10m')
     plt.xlabel('Lon')
     plt.ylabel('Lat')
     #plt.title('Identified Tephras Not identified samples',fontsize=25)
-    if Datas.Evento.unique().size > 90:
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.83,1),ncol=3,fontsize=13)
-    if (Datas.Evento.unique().size > 45)&(Datas.Evento.unique().size < 90):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.5,1),ncol=2,fontsize=13)
-    if (Datas.Evento.unique().size < 45):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1,1),ncol=1,fontsize=15)
+    #if Datas.Event.unique().size > 90:
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.83,1),ncol=3,fontsize=13)
+    #if (Datas.Event.unique().size > 45)&(Datas.Event.unique().size < 90):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.5,1),ncol=2,fontsize=13)
+    #if (Datas.Event.unique().size < 45):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.6,1),ncol=1,fontsize=15)
 		
-    leg.get_frame().set_alpha(0.5)
+    #leg.get_frame().set_alpha(0.5)
     
     if save:
         if zona == 'SVZ':
-            plt.savefig('../Plots/PosiciónDataSVZ.pdf',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')
+            plt.savefig('../Plots/'+nombre+'.pdf',dpi = 300,bbox_inches='tight')#bbox_extra_artists=(leg,)
         if zona == 'AVZ':
-            plt.savefig('../Plots/PosiciónDataAVZ.pdf',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')        
+            plt.savefig('../Plots/'+nombre+'.pdf',dpi = 300,bbox_inches='tight')#,bbox_extra_artists=(leg,)        
         if zona == 'Ambos':
-            plt.savefig('../Plots/PosiciónSamples.pdf',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')    
+            plt.savefig('../Plots/'+nombre+'.pdf',dpi = 300,bbox_inches='tight')    
 		
     plt.show()
+def grafico_posicion_section(Datas,zona,VolcanoES='default', texto='no',save=False,nombre='default',MarkerSize=9):
+
+    plt.figure(figsize=(10,10))
+    ax = plt.axes(projection = ccrs.PlateCarree())
+    Datas = Datas.dropna(how='any',subset=['Latitud']) 
+    Datas = Datas.reset_index(drop=True)
+    Volcanoes = Datas.Volcano
+    Events = Datas.Event
+    Lon =  Datas.Longitud
+    Lat =  Datas.Latitud
+    markeR = itertools.cycle(('o','s','v','p','d','<','^','X','+','*','D','x'))
+
+    for Volcano in Datas.Volcano.unique():
+        #print('Volcano {}'.format(Volcano))
+        temp0 = Datas[Datas.Volcano == Volcano]
+        #print(Volcano)
+        for seccion in temp0.Seccion.unique():
+            #print(Event,temp0.Event.unique())
+            temp = temp0[temp0.Seccion== seccion]
+            Index = temp.first_valid_index()
+            #print(Datas.SampleObservationID[Index])
+            x,y = (temp.Longitud[Index],temp.Latitud[Index])
+            Color, Marker  = simbologia(temp.Volcano[Index],'Unknown')
+            plt.plot(x,y, color = Color, marker = next(markeR), transform = ccrs.PlateCarree(),markersize=MarkerSize, alpha=.8,label=seccion,markeredgecolor='black')#,markeredgecolor='black'
+ 	
+    if zona == 'Ambos':
+        MarkerSize = 18
+        FontSize=10
+    else:
+        MarkerSize = 28
+        FontSize=24
+		
+    VolcanoES = VolcanoES.reset_index(drop=True)	
+    for i in range(0,np.size(VolcanoES.Volcano)):
+        Color, Marker  = simbologia(VolcanoES.Volcano[i],'Unknown')
+        x,y = (VolcanoES.Longitud[i],VolcanoES.Latitud[i])
+        if (VolcanoES.Volcano[i] == 'MD07-3098')|(VolcanoES.Volcano[i] == 'MD07-3100')|(VolcanoES.Volcano[i] == 'MD07-3081')|(VolcanoES.Volcano[i] == 'MD07-3082')|(VolcanoES.Volcano[i] == 'MD07-3088')|(VolcanoES.Volcano[i] == 'MD07-3119'):
+            #print(VolcanoES.Volcano[i])
+            MarkerSize = 15			
+            plt.plot(x,y, color = Color, marker = 's', transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor='black',alpha=0.7)#,markeredgewidth=1 + i/10
+        else:
+            #print(VolcanoES.Volcano[i])
+            plt.plot(x,y, color = Color, marker = '^', transform = ccrs.PlateCarree(),markersize=MarkerSize,markeredgecolor='black',alpha=0.7)#,markeredgewidth=1 + i/10
+        
+        if texto == 'sí':
+            ax.text(x+ 1.2, y+0.22,VolcanoES.Volcano[i], transform=ccrs.PlateCarree(),weight='bold',color='black',fontsize=11)
+        
+    if zona == 'SVZ':
+	    #extent : scalars (left, right, bottom, top), optional
+        ax.imshow(SVZ,extent=[-77.0304,-68.0880,-46.9696,-37.8877],origin='upper', transform = ccrs.PlateCarree(),alpha=0.55)    
+        ax.set_extent([-77.0304,-68.0880,-46.9696,-37.8877],crs = ccrs.PlateCarree())
+                        
+    if zona == 'AVZ':
+        ax.imshow(AVZ,extent=[-76.5000,-64.7930,-56.1270,-45.0176],origin='upper', transform = ccrs.PlateCarree(),alpha=0.55)
+		
+        ax.set_extent([-76.5000,-64.7930,-56.1270,-45.0176],crs = ccrs.PlateCarree())
+    if zona == 'Ambos':
+        ax.imshow(Ambos,extent=[-77.2699,-64.8598,-56.3484,-37.6805],origin='upper', transform = ccrs.PlateCarree(),alpha=0.55)    
+        ax.set_extent([-77.2699,-64.8598,-56.3484,-37.6805],crs = ccrs.PlateCarree())		
+
 	
-def TAS(Data,Data_cores):
+    ax.coastlines(resolution='10m')
+    plt.xlabel('Lon')
+    plt.ylabel('Lat')
+    #plt.title('Identified Tephras Not identified samples',fontsize=25)
+    #if Datas.Event.unique().size > 90:
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.83,1),ncol=3,fontsize=13)
+    #if (Datas.Event.unique().size > 45)&(Datas.Event.unique().size < 90):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.5,1),ncol=2,fontsize=13)
+    #if (Datas.Event.unique().size < 45):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.6,1),ncol=1,fontsize=15)
+		
+    #leg.get_frame().set_alpha(0.5)
     
+    if save:
+        if zona == 'SVZ':
+            plt.savefig('../Plots/'+nombre+'.pdf',dpi = 300,bbox_inches='tight')#bbox_extra_artists=(leg,)
+        if zona == 'AVZ':
+            plt.savefig('../Plots/'+nombre+'.pdf',dpi = 300,bbox_inches='tight')#,bbox_extra_artists=(leg,)        
+        if zona == 'Ambos':
+            plt.savefig('../Plots/'+nombre+'.pdf',dpi = 300,bbox_inches='tight')    
+		
+    plt.show()	
+def TAS(Data,Data_cores='default'):
        
     plt.figure(figsize=(13,13))
     ax = plt.axes()
-            
     #plot identifyed glass shards
     Data = Data.dropna(subset=['Na2O','K2O','SiO2'])
     Data = Data.reset_index(drop=True)
@@ -474,56 +743,57 @@ def TAS(Data,Data_cores):
     K2O = Data['K2O'].values
     SiO2 = Data['SiO2'].values
     
-    Volcanes = Data.Volcan.values
-    Eventos = Data.Evento.values
-    Volcan = Volcanes[0]
-    Evento = Eventos[1]
+    Volcanoes = Data.Volcanoo.values
+    Events = Data.Event.values
+    Volcano = Volcanoes[0]
+    Event = Events[1]
     
-    for i in range(0,np.size(Eventos)):
-        if Evento == Eventos[i]:
-            Color, Marker  = simbologia(Volcanes[i],Eventos[i])
+    for i in range(0,np.size(Events)):
+        if Event == Events[i]:
+            Color, Marker  = simbologia(Volcanoes[i],Events[i])
             plt.plot(SiO2[i], Na2O[i]+K2O[i], color = Color, marker = Marker,markersize=12, alpha=0.4,markeredgecolor = 'black')
         else:
-            if Volcanes[i]==Volcan:
-                Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-                plt.plot(SiO2[i], Na2O[i]+K2O[i], color = Color, marker = Marker, markersize = 12,alpha=0.4, label = Eventos[i] , markeredgecolor = 'black')
-                Evento = Eventos[i]
+            if Volcanoes[i]==Volcano:
+                #print(Volcanoes[i],Events[i])
+                Color, Marker  = simbologia(Volcanoes[i],Events[i])
+                plt.plot(SiO2[i], Na2O[i]+K2O[i], color = Color, marker = Marker, markersize = 12,alpha=0.4, label = Events[i] , markeredgecolor = 'black')
+                Event = Events[i]
 
             else:
-                Color, Marker  = simbologia(Volcanes[i],Eventos[i])
-                plt.plot(SiO2[i], Na2O[i]+K2O[i], color = Color, marker = Marker,markersize=12,alpha=0.4,label=Eventos[i] , markeredgecolor = 'black')
-                Evento = Eventos[i]
-                Volcan = Volcanes[i]
+                Color, Marker  = simbologia(Volcanoes[i],Events[i])
+                plt.plot(SiO2[i], Na2O[i]+K2O[i], color = Color, marker = Marker,markersize=12,alpha=0.4,label=Events[i] , markeredgecolor = 'black')
+                Event = Events[i]
+                Volcano = Volcanoes[i]
                 
- #---------------------------------------plot core data when given
-    Depth = Data_cores['Depth'].values
-    Na2O = Data_cores['Na2O'].values
-    K2O = Data_cores['K2O'].values
-    SiO2 = Data_cores['SiO2'].values
-    Core = Data_cores['Core'].values
-    Depth0 = 0
-    for i in range(0,np.size(Depth)-1):
-        
-        Color, Marker  = simbologia_core(Core[i],Depth[i])
-        if Depth[i] == Depth0:
-            plt.plot(SiO2[i], Na2O[i]+K2O[i],marker = Marker, color = Color, markersize=13,alpha=1, markeredgecolor = 'black')
-        else:
-            plt.plot(SiO2[i], Na2O[i]+K2O[i],marker = Marker, color = Color, markersize=13,alpha=1, markeredgecolor = 'black', label = Data_cores.Depth[i])
-            Depth0 = Depth[i]                
+#---------------------------------------plot core data when given
+    if isinstance(Data_cores,pd.DataFrame):   
+        Depth = Data_cores['Depth'].values
+        Na2O = Data_cores['Na2O'].values
+        K2O = Data_cores['K2O'].values
+        SiO2 = Data_cores['SiO2'].values
+        Core = Data_cores['Core'].values
+        Depth0 = 0
+        for i in range(0,np.size(Depth)-1):
+            Color, Marker  = simbologia_core(Core[i],Depth[i])
+            if Depth[i] == Depth0:
+                plt.plot(SiO2[i], Na2O[i]+K2O[i],marker = Marker, color = Color, markersize=13,alpha=1, markeredgecolor = 'black')
+            else:
+                plt.plot(SiO2[i], Na2O[i]+K2O[i],marker = Marker, color = Color, markersize=13,alpha=1, markeredgecolor = 'black', label = Data_cores.Depth[i])
+                Depth0 = Depth[i]                
 
-            
     #plt.xlim(45,85)
     #plt.ylim(0,5)
+    tasplot.add_LeMaitre_fields(ax)
     plt.xlabel('SiO2', fontsize = 22)
     plt.ylabel('Na2O + K2O', fontsize = 22)
     ax.tick_params(labelsize = 21)
-    if Data.Evento.unique().size > 90:
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
-    if (Data.Evento.unique().size > 45)&(Data.Evento.unique().size < 90):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.5,1),ncol=2,fontsize=13)
-    if (Data.Evento.unique().size < 45):
-        leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1,1),ncol=1,fontsize=15)
-    leg.get_frame().set_alpha(1)
+    #if Data.Event.unique().size > 90:
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(2,1),ncol=3,fontsize=11)
+    #if (Data.Event.unique().size > 45)&(Data.Event.unique().size < 90):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1.5,1),ncol=2,fontsize=13)
+    #if (Data.Event.unique().size < 45):
+    #    leg=plt.legend(loc='upper right', fancybox=True, bbox_to_anchor=(1,1),ncol=1,fontsize=15)
+    #leg.get_frame().set_alpha(1)
     plt.savefig('../Plots/TAS.pdf',dpi = 300,bbox_extra_artists=(leg,),bbox_inches='tight')
     plt.show()
 	
@@ -548,3 +818,48 @@ def MissingMechanism(DATA):
 
     Data = Data.replace(-1,np.nan)
     return Data
+	
+def Histogramas(Data_temp):
+
+	for elemento in Data_temp.columns:
+		if (elemento != 'Volcano')&(elemento != 'Event'):  
+			print(" ")
+			print('\033[1m'+ elemento + '\033[0m')
+			for i in Data_temp.Volcano.unique():
+				print(i)
+				coloR, Marker  = simbologia(i,'Unknown')
+				Data_Volcano =Data_temp[Data_temp['Volcano']==i]
+				if pd.isnull(Data_Volcano[elemento]).all():
+					print('Volcán without information {}'.format(i))              
+				else:
+					plt.hist(Data_Volcano[elemento] ,label= i, color = coloR, alpha= 0.3,range=(np.nanmin(Data_Volcano[elemento]), np.nanmax(Data_Volcano[elemento])))  
+    
+			plt.gca().set(xlabel=elemento,ylabel='Frequency')
+			plt.legend(bbox_to_anchor=(1,1),ncol=2)
+			plt.show()
+			
+def Colores(Y,df):
+    Dpal = {}
+    for i, ID in enumerate(np.unique(Y)):
+        volcan = df.Volcano.cat.categories[ID]
+        #print(volcan)
+        color, marker = simbologia(volcan,'Unknown')
+        Dpal[volcan] = color
+    return Dpal
+
+def graficar_imputing(est,X,X_imp,df,y,A,B):
+    dpal = Colores(y,df)
+    fig, axes = plt.subplots(1, 2, figsize=(15,5),sharex=True,sharey=True)
+    sns.scatterplot(X.loc[:, A], X.loc[:, B],hue=df.Volcano.cat.categories[y], alpha=0.7, palette=dpal, ax=axes[0])
+    axes[0].set_title("Original data",fontsize=14)
+    axes[0].legend(loc='center left', bbox_to_anchor=(0, -0.4), ncol=3)
+    #axes[0].set_xlim([40,80]);axes[0].set_ylim([0,5])
+    #sns.scatterplot(X.loc[:, A], X.loc[:, B],
+    #            hue=df.Volcan.cat.categories[y], alpha=0.7, palette=dpal, ax=axes[1])
+    sns.scatterplot(X_imp.loc[:, A], X_imp.loc[:, B],alpha=0.7, hue=df.Volcano.cat.categories[y], ax=axes[1], palette=dpal,s=30)
+    #sns.scatterplot(X_imp.loc[:, A], X_imp.loc[:, B],
+    #            alpha=0.7, ax=axes[1], marker='x', color='k',s=30)
+    axes[1].set_title(est,fontsize=14)
+    axes[1].legend(loc='center left', bbox_to_anchor=(0, -0.6), ncol=3)
+    #axes[1].set_xlim([40,80]);axes[0].set_ylim([0,5])
+    fig.show()
